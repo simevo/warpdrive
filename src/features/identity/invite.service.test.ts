@@ -5,10 +5,12 @@ import { ADMIN_DEFAULT_FLAGS, REGULAR_DEFAULT_FLAGS } from "@/constants/permissi
 import {
   auditEvents,
   permissionSets,
+  userIdentities,
   users,
   visibilityGroupMembers,
   visibilityGroups,
 } from "@/db/schema";
+import { gravatarUrl } from "@/features/identity/avatar/gravatar";
 import type { PermSetUser } from "@/features/permissions/effective";
 import { makeTestDb, type TestDb } from "@/test/db";
 import { inviteUser } from "./invite.service";
@@ -54,14 +56,14 @@ beforeEach(async () => {
   ]);
   await h.db.insert(visibilityGroups).values({ name: "Everyone" });
   await h.db.insert(users).values([
-    { id: admin.id, email: "admin@example.com", name: "Admin", googleSub: "g-a", isAdmin: true },
-    { id: manager.id, email: "mgr@example.com", name: "Mgr", googleSub: "g-m" },
-    { id: regular.id, email: "reg@example.com", name: "Reg", googleSub: "g-r" },
+    { id: admin.id, email: "admin@example.com", name: "Admin", isAdmin: true },
+    { id: manager.id, email: "mgr@example.com", name: "Mgr" },
+    { id: regular.id, email: "reg@example.com", name: "Reg" },
   ]);
 });
 
 describe("inviteUser", () => {
-  test("inserts a pre-authorized placeholder user (googleSub null, invitedAt set)", async () => {
+  test("inserts an adoptable placeholder user (no identities, invitedAt set)", async () => {
     const r = await inviteUser(
       h.db,
       admin,
@@ -72,8 +74,12 @@ describe("inviteUser", () => {
 
     const [u] = await h.db.select().from(users).where(eq(users.email, "inv@ex.com"));
     expect(u).toBeDefined();
-    expect(u!.googleSub).toBeNull();
     expect(u!.invitedAt).not.toBeNull();
+    const identities = await h.db
+      .select()
+      .from(userIdentities)
+      .where(eq(userIdentities.userId, u!.id));
+    expect(identities).toHaveLength(0);
     expect(u!.isAdmin).toBe(false);
 
     const [everyone] = await h.db.select().from(visibilityGroups);
@@ -83,6 +89,19 @@ describe("inviteUser", () => {
       .where(eq(visibilityGroupMembers.userId, u!.id));
     expect(membership).toHaveLength(1);
     expect(u!.primaryVisibilityGroupId).toBe(everyone!.id);
+  });
+
+  test("fills the placeholder avatar from gravatar", async () => {
+    const r = await inviteUser(
+      h.db,
+      admin,
+      { email: "avatar@ex.com", name: "Avatar", isAdmin: false },
+      SIG(),
+    );
+    expect(r.ok).toBe(true);
+
+    const [u] = await h.db.select().from(users).where(eq(users.email, "avatar@ex.com"));
+    expect(u!.avatarUrl).toBe(gravatarUrl("avatar@ex.com"));
   });
 
   test("invites an admin placeholder when isAdmin is true", async () => {
