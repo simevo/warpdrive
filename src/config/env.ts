@@ -46,6 +46,11 @@ function applyLegacyStorageNames(
 
 const boolFromString = z.enum(["true", "false"]).transform((v) => v === "true");
 
+const optionalBoolFromString = z.preprocess(
+  (v) => (v === "" ? undefined : v),
+  boolFromString.optional(),
+);
+
 const flagFromString = z.string().transform((v) => v === "true" || v === "1");
 
 const optionalUrl = z
@@ -58,7 +63,7 @@ const base = z.object({
   GOOGLE_OAUTH_CLIENT_ID: z.string().default(""),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().default(""),
   GOOGLE_WORKSPACE_DOMAIN: z.string().default(""),
-  GOOGLE_SIGNIN_ENABLED: boolFromString.optional(),
+  GOOGLE_SIGNIN_ENABLED: optionalBoolFromString,
   OIDC_ISSUER_URL: optionalUrl,
   OIDC_CLIENT_ID: z.string().default(""),
   OIDC_CLIENT_SECRET: z.string().default(""),
