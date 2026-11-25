@@ -11,5 +11,4 @@ ALTER TABLE "user_identities" ADD CONSTRAINT "user_identities_user_id_users_id_f
 CREATE UNIQUE INDEX "user_identities_provider_subject_uq" ON "user_identities" USING btree ("provider","subject");--> statement-breakpoint
 CREATE INDEX "user_identities_user_idx" ON "user_identities" USING btree ("user_id");--> statement-breakpoint
 INSERT INTO "user_identities" ("user_id","provider","subject") SELECT "id", 'google', "google_sub" FROM "users" WHERE "google_sub" IS NOT NULL;--> statement-breakpoint
-ALTER TABLE "users" DROP COLUMN "google_sub";--> statement-breakpoint
-UPDATE "users" SET "avatar_url" = 'https://gravatar.com/avatar/' || encode(digest(lower(trim("email")), 'sha256'), 'hex') || '?d=identicon&s=100' WHERE "avatar_url" IS NULL;
+ALTER TABLE "users" DROP COLUMN "google_sub";
